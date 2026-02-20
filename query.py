@@ -1,3 +1,4 @@
+# query.py
 import os
 import psycopg2
 from datetime import datetime
@@ -11,22 +12,28 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def add_or_update_user(chat_id, name, phone):
-    joined_at = datetime.now()
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO users (chat_id, name, phone, joined_at)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (chat_id)
-        DO UPDATE SET name = EXCLUDED.name,
-                      phone = EXCLUDED.phone,
-                      joined_at = EXCLUDED.joined_at
-    """, (chat_id, name, phone, joined_at))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    """Insert or update a user record."""
+    try:
+        joined_at = datetime.now()
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO users (chat_id, name, phone, joined_at)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (chat_id)
+            DO UPDATE SET name = EXCLUDED.name,
+                          phone = EXCLUDED.phone,
+                          joined_at = EXCLUDED.joined_at
+        """, (chat_id, name, phone, joined_at))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print(f"✅ User saved: {name} ({chat_id})")
+    except Exception as e:
+        print(f"ERROR saving user: {e}")
 
 def get_channel_link():
+    """Return the first channel link from DB."""
     try:
         conn = get_connection()
         cursor = conn.cursor()

@@ -8,7 +8,6 @@ from query import add_or_update_user, get_channel_link
 load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # e.g., https://your-server.com
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
@@ -51,16 +50,6 @@ def webhook():
 def index():
     return "Bot is running!", 200
 
-# --- Set Webhook Automatically ---
-@app.before_first_request
-def setup_webhook():
-    if WEBHOOK_URL:
-        webhook_full = f"{WEBHOOK_URL}/{BOT_TOKEN}"
-        bot.remove_webhook()
-        bot.set_webhook(url=webhook_full)
-        print(f"Webhook set to {webhook_full}")
-    else:
-        print("WEBHOOK_URL not set in .env, skipping automatic webhook setup.")
-
 if __name__ == "__main__":
+    # Run Flask server
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))

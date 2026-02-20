@@ -1,12 +1,23 @@
+import os
+from fastapi import FastAPI, Request
 import telebot
 from telebot import types
-from database import add_or_update_user, get_channel_link
+from query import add_or_update_user, get_channel_link
+from dotenv import load_dotenv
+import uvicorn
 
-TOKEN = "8586626106:AAHkG6mI7EXrPiwXK8pUCL01jUZxCJO_S1I"  
-bot = telebot.TeleBot(TOKEN)
+load_dotenv()
 
+TOKEN = os.environ.get("BOT_TOKEN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+PORT = int(os.environ.get("PORT", 8000))
+WEBHOOK_PATH = f"/{TOKEN}/"  # secret path
+
+bot = telebot.TeleBot(TOKEN, threaded=False)
 user_data = {}
+app = FastAPI()
 
+# --- Bot Handlers ---
 @bot.message_handler(commands=['start'])
 def start(message):
     bot.send_message(message.chat.id, "سلام 👋\nلطفا نام خود را وارد کنید:")
@@ -25,13 +36,26 @@ def get_phone(message):
     name = user_data[chat_id]["name"]
     phone = message.contact.phone_number if message.contact else message.text
 
-    # Save user in database
     add_or_update_user(chat_id, name, phone)
-
-    # Get channel link
     channel_link = get_channel_link()
-
     bot.send_message(chat_id, f"✅ {name} عزیز، ممنون! لینک کانال شما:\n{channel_link}")
     user_data.pop(chat_id, None)
 
-bot.infinity_polling()
+# --- FastAPI Webhook Route ---
+@app.post(WEBHOOK_PATH)
+async def telegram_webhook(request: Request):
+    json_data = await request.json()
+    update = telebot.types.Update.de_json(json_data)
+    bot.process_new_updates([update])
+    return {"status": "ok"}
+
+# --- Startup: set webhook ---
+@app.on_event("startup")
+async def on_startup():
+    bot.remove_webhook()
+    bot.set_webhook(url=WEBHOOK_URL + WEBHOOK_PATH)
+    print(f"Webhook set to {WEBHOOK_URL + WEBHOOK_PATH}")
+
+# --- Run Uvicorn ---
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

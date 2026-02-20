@@ -5,7 +5,7 @@ import telebot
 from telebot import types
 from dotenv import load_dotenv
 from query import add_or_update_user, get_channel_link
-from schema import create_tables
+from schima import create_tables
 
 load_dotenv()
 

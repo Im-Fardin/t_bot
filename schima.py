@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS channels (
 )
 """)
 
-# Insert default channel
+# Insert default channel if not exists
 cursor.execute("SELECT COUNT(*) FROM channels")
 if cursor.fetchone()[0] == 0:
     cursor.execute(
@@ -39,3 +39,4 @@ if cursor.fetchone()[0] == 0:
 
 cursor.close()
 conn.close()
+print("Database setup complete ✅")

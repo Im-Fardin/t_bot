@@ -27,10 +27,14 @@ def add_or_update_user(chat_id, name, phone):
     conn.close()
 
 def get_channel_link():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT channel_link FROM channels LIMIT 1")
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return row[0] if row else None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT channel_link FROM channels LIMIT 1")
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return row[0] if row else None
+    except Exception as e:
+        print(f"ERROR fetching channel link: {e}")
+        return None

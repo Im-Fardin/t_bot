@@ -1,23 +1,18 @@
 import os
-from fastapi import FastAPI, Request
+from flask import Flask, request
 import telebot
 from telebot import types
-from query import add_or_update_user, get_channel_link
 from dotenv import load_dotenv
-
-# ASGI → WSGI adapter
-from asgi2wsgi import asgi2wsgi
+from query import add_or_update_user, get_channel_link
 
 load_dotenv()
 
-TOKEN = os.environ.get("BOT_TOKEN")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
-PORT = int(os.environ.get("PORT", 8000))
-WEBHOOK_PATH = f"/{TOKEN}/"  # secret path
+BOT_TOKEN = os.getenv('BOT_TOKEN')
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # e.g., https://your-server.com
 
-bot = telebot.TeleBot(TOKEN, threaded=False)
+bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
+app = Flask(__name__)
 user_data = {}
-app = FastAPI()
 
 # --- Bot Handlers ---
 @bot.message_handler(commands=['start'])
@@ -43,20 +38,29 @@ def get_phone(message):
     bot.send_message(chat_id, f"✅ {name} عزیز، ممنون! لینک کانال شما:\n{channel_link}")
     user_data.pop(chat_id, None)
 
-# --- FastAPI Webhook Route ---
-@app.post(WEBHOOK_PATH)
-async def telegram_webhook(request: Request):
-    json_data = await request.json()
-    update = telebot.types.Update.de_json(json_data)
+# --- Telegram Webhook Endpoint ---
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook():
+    json_data = request.get_data().decode("utf-8")
+    update = types.Update.de_json(json_data)
     bot.process_new_updates([update])
-    return {"status": "ok"}
+    return "OK", 200
 
-# --- Startup: set webhook ---
-@app.on_event("startup")
-async def on_startup():
-    bot.remove_webhook()
-    bot.set_webhook(url=WEBHOOK_URL + WEBHOOK_PATH)
-    print(f"Webhook set to {WEBHOOK_URL + WEBHOOK_PATH}")
+# --- Health Check ---
+@app.route("/")
+def index():
+    return "Bot is running!", 200
 
-# --- Wrap app in WSGI for Gunicorn ---
-app = asgi2wsgi(app)
+# --- Set Webhook Automatically ---
+@app.before_first_request
+def setup_webhook():
+    if WEBHOOK_URL:
+        webhook_full = f"{WEBHOOK_URL}/{BOT_TOKEN}"
+        bot.remove_webhook()
+        bot.set_webhook(url=webhook_full)
+        print(f"Webhook set to {webhook_full}")
+    else:
+        print("WEBHOOK_URL not set in .env, skipping automatic webhook setup.")
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))

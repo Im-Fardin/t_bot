@@ -4,7 +4,9 @@ import telebot
 from telebot import types
 from query import add_or_update_user, get_channel_link
 from dotenv import load_dotenv
-import uvicorn
+
+# ASGI → WSGI adapter
+from asgi2wsgi import asgi2wsgi
 
 load_dotenv()
 
@@ -56,6 +58,5 @@ async def on_startup():
     bot.set_webhook(url=WEBHOOK_URL + WEBHOOK_PATH)
     print(f"Webhook set to {WEBHOOK_URL + WEBHOOK_PATH}")
 
-# --- Run Uvicorn ---
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=PORT)
+# --- Wrap app in WSGI for Gunicorn ---
+app = asgi2wsgi(app)

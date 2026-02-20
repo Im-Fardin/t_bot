@@ -1,6 +1,6 @@
 pyTelegramBotAPI
 fastapi
-uvicorn        
 gunicorn
 python-dotenv
 psycopg2-binary
+asgi2wsgi
